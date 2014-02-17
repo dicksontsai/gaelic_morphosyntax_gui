@@ -31,8 +31,6 @@ class App(object):
 		self.root.content = self.root.open_content_frames['welcome'] = WelcomeFrame(self.root)
 		#self.content.grid(row=1, column=1)
 
-
-
 		#self.content_window = self.content.create_window(window=)
 		#self.label = Label(self.root, text="Enter your weight in pounds.")
 
@@ -52,15 +50,19 @@ class MenuBar(Frame):
 		self.menuBar = Menu(self.top)
 		self.top['menu'] = self.menuBar
 		self.create_file_menu()
+		self._init_bindings()
 
 	def create_file_menu(self):
 		self.fileMenu = Menu(self.menuBar)
 		self.menuBar.add_cascade(label='File', menu=self.fileMenu)
-		self.fileMenu.add_command(label='Open', command=self.__openHandler)
+		self.fileMenu.add_command(label='Open', command=self._openHandler, accelerator="Ctrl-o")
 
-	def __openHandler(self):
+	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
 		print selected_file
+
+	def _init_bindings(self):
+		root.bind('<Control-o>', self._openHandler)
 
 
 class WelcomeFrame(Frame):
@@ -137,7 +139,7 @@ class FilePage(Frame):
 	""" Displays the frame for each json file"""
 	def __init__(self, parent, json_file_name):
 		Frame.__init__(self, parent)
-		
+
 		try:
 			sentences = json.load(open(json_file_name))
 		except ValueError:
