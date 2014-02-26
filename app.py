@@ -2,19 +2,23 @@ from Tkinter import *
 import tkMessageBox, tkFileDialog, tkFont
 import os, fnmatch, json
 from util import *
+
 SCREEN_WIDTH = 1366
 SCREEN_HEIGHT = 768
 CONTENT_MIDDLE_X = 150
 CONTENT_MIDDLE_Y = 150
+SENTENCE_METADATA = ("sentence", "translation", "metatags")
 #welcome_font = tkFont.Font(family='Helvetica', size='-100', weight='bold', underline=1)
 
 def delete_content_frame():
+	assert root.previous_frame is not None, "No frame to fall back on"
 	switch_content_frames(root.previous_frame)
 
 def switch_content_frames(new_frame=None):
 	root.content.delete("self.active_frame")
 	if new_frame is None:
 		new_frame = root.default_frame
+	assert isinstance(new_frame, Frame), "Bad input"
 	root.previous_frame = root.active_frame 
 	root.active_frame = new_frame
 	root.content.delete(root.active_frame_window)
@@ -46,13 +50,22 @@ class App(object):
 		self.root.active_frame_window = self.root.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=self.root.active_frame, anchor=NW, tags="self.active_frame")
 		#self.content.grid(row=1, column=1)
 
-		#self.content_window = self.content.create_window(window=)
-		#self.label = Label(self.root, text="Enter your weight in pounds.")
+		self.init_bindings()
 
 		#self.label.pack()
 		self.root.mainloop()
 
 
+	def init_bindings(self):
+		"""These bindings define keyboard shortucts to app"""
+		self.root.bind('<Control-o>', self.top_menu._openHandler)
+		self.root.bind('<Control-s>', self.save_shortcut)
+
+	def save_shortcut(self):
+		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
+			self.root.active_frame.save()
+		else:
+			print "No save command"
 
 class MenuBar(Frame):
 	"""
@@ -65,7 +78,6 @@ class MenuBar(Frame):
 		self.menuBar = Menu(self.top)
 		self.top['menu'] = self.menuBar
 		self.create_file_menu()
-		self._init_bindings()
 
 	def create_file_menu(self):
 		self.fileMenu = Menu(self.menuBar)
@@ -75,9 +87,6 @@ class MenuBar(Frame):
 	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
 		print selected_file
-
-	def _init_bindings(self):
-		root.bind('<Control-o>', self._openHandler)
 
 
 class WelcomeFrame(Frame):
@@ -168,6 +177,7 @@ class SideBar(Frame):
 		self.new_file_button.grid(row=1)
 		self.listbox = Listbox(self.instance)
 		self.listbox.grid(row=2)
+		self.initialize_listbox()
 		self.render_sidebar()
 		self.current_file = None
 
@@ -177,13 +187,12 @@ class SideBar(Frame):
 		def onselect(evt):
 			if self.current_file is not None:
 				self.current_file.save()
-				print str(self.current_file) + " is saved"
 			w = evt.widget
 			index = int(w.curselection()[0])
 			value = w.get(index)
 			print 'You selected file %d: "%s"' % (index, value)
 			self.current_file = FilePage(root, value)
-			self.switch_content_frames(self.current_file)
+			switch_content_frames(self.current_file)
 
 
 	def render_sidebar(self):
@@ -206,8 +215,10 @@ class SideBar(Frame):
 		self.listbox.insert(END, file_name)
 		self.files_list.append(file_name)
 
+	"""
 	def __str__(self):
 		return "SideBar"
+	"""
 """
 class SideBarButton(Button):
 	def __init__(self, parent, json_file_name):
@@ -233,50 +244,79 @@ class FilePage(Frame):
 		self.grid(row=1)
 		self.instance = Frame(self)
 		self.instance.grid(row=0)
-		self.sentence_index = 0
+		self.sentence_index = -1
 		self.current_row = 0
 		Button(self.instance, text="Add new sentence", command=self._new_sentence).grid(row=self.current_row, column=1)
 		self.current_row += 1
-		self.load_sentences(json_file_name)
-
-	def load_sentences(self, json_file_name):
 		self.file = json_file_name
+		self.sentence_button_text = []
+		self.load_sentences()
+
+	def load_sentences(self):
 		try:
-			json_file = json.load(open(json_file_name))
-			self.sentences = json_file["sentences"]
+			self.json = json.load(open(self.file))
+			self.sentences = self.json["sentences"]
+			if len(self.sentences) == 0:
+				self.empty_label = Label(self.instance, text="This JSON file is empty. Please click the button to add a new sentence", justify=CENTER)
+				self.empty_label.grid(row=1)
+				return
+			counter, length = 0, len(self.sentences)
+			while counter < length:
+				self.new_sentence_display(self.sentences[counter])
+				counter += 1
+			return
 		except ValueError:
 			print "Invalid JSON file"
 			return
 
 	def _new_sentence(self):
 		#root.previous_frame = self
-		new_sentence_form = NewSentenceForm(root)
+		new_sentence_form = NewSentenceForm(root, self)
 		switch_content_frames(new_sentence_form)
 
 	def new_sentence_display(self, sentence_obj):
-		button_index = self.sentence_index
+		self.sentences.append(sentence_obj)
+		if hasattr(self, "empty_label"):
+			self.empty_label.grid_forget()
 		self.sentence_index += 1
-		button_text = str(button_index) + ") " + self._preview(sentence_obj).join("\n")
-		button = Button(self.instance, text=button_text, justify=LEFT, command=lambda: self.open_sentence(self.sentences[button_index]))
+		button_index = self.sentence_index
+		self.sentence_button_text.append(self.compute_preview(sentence_obj, button_index))
+		button = Button(self.instance, textvariable=self.sentence_button_text[button_index], justify=LEFT, command=lambda: self.edit_sentence(button_index))
 		button.grid(row=self.current_row)
 		self.current_row += 1
 
-	def _preview(self, sentence_obj):
+	def compute_preview(self, sentence_obj, button_index, button_text=None):
+		if button_text is None:
+			button_text = StringVar()
 		previews = []
-		for key in ("sentence", "translation"):
+		for key in SENTENCE_METADATA:
 			entry = sentence_obj[key]
+			if key == "sentence":
+				entry = entry.replace("+", " ")
 			if len(entry) > 30:
 				entry = entry[:30] + "..."
 			previews.append(entry)
 		previews.append("Missing glosses: " + str(reduce(lambda x, y: x + int("^" in y), sentence_obj["glosses"], 0)))
-		return previews
+		button_text.set(str(button_index) + ") " + "\n".join(previews))
+		return button_text
 
-	def open_sentence(self, sentence_obj):
+	def edit_sentence(self, sentence_index):
 		# TODO: Make sure sentence editor marks the original sentence dirty and moves new sentence into the dictionary when saved
-		pass
+		edit_form = SentenceEditor(root, sentence_index, self)
+		switch_content_frames(edit_form)
 
+	def save(self):
+		"""
+		Saves any changes made to the FilePage
+		"""
+		file_to_write = open(self.file, 'w')
+		file_to_write.write(json.dumps(self.json))
+		print self.file + " is saved"
+
+	"""
 	def __str__(self):
-		return "FilePage: " + json_file_name
+		return "FilePage: " + self.file
+	"""
 
 class Form(Frame):
 	""" A class inspired by HTML """
@@ -295,10 +335,21 @@ class Form(Frame):
 		self.current_row += 1
 		return entry_text
 
-	def textarea(self, text):
+	def input_pair(self, text1="", text2=""):
+		"""Sets up two pairs of input that are next to each other"""
+		entry_1 = StringVar()
+		entry_1.set(text1)
+		Entry(self.instance, textvariable=entry_1).grid(row=self.current_row)
+		entry_2 = StringVar()
+		entry_2.set(text2)
+		Entry(self.instance, textvariable=entry_2).grid(row=self.current_row, column=1)
+		self.current_row += 1
+		return entry_1, entry_2
+
+	def textarea(self, text, height=15):
 		Label(self.instance, text=text, justify=LEFT).grid(row=self.current_row)
 		self.current_row += 1
-		text_area = Text(self.instance) # Use .get(1, END) 
+		text_area = Text(self.instance, height=height) # Use .get(1, END) 
 		text_area.grid(row=self.current_row)
 		self.current_row += 1
 		return text_area
@@ -306,10 +357,8 @@ class Form(Frame):
 	def cancel_button(self, cancel_action, text="Cancel"):
 		Button(self.instance, text=text, command=cancel_action).grid(row=self.current_row, column=1)
 
-	def save_button(self, save_action, text="Save"):
-		Button(self.instance, text=text, command=save_action).grid(row=self.current_row, column=2)
-
-#class SentenceEditor(Frame):
+	def save_button(self, save_action, text="Save", column=2):
+		Button(self.instance, text=text, command=save_action).grid(row=self.current_row, column=column)
 
 class NewFileForm(Form):
 	def __init__(self, parent):
@@ -339,32 +388,92 @@ class NewFileForm(Form):
 		root.sidebar.add_file_to_sidebar(file_name)
 		delete_content_frame()
 
-class NewSentenceForm(Form):
+class SentenceForm(Form):
+	"""A form that deals with sentences"""
+	def sentence_metadata_input(self):
+		self.entries = {}
+		self.entries["sentence"] = self.textarea("Whole sentence.")
+		self.entries["translation"] = self.textarea("Translation: ")
+		self.entries["metatags"] = self.textarea("Metatags: ")
+
+	def get_responses(self):
+		self.responses = {}
+		for key, value in self.entries.items():
+			if isinstance(value, Text):
+
+				self.responses[key] = value.get(0.0, END)
+				self.responses[key] = self.responses[key].strip("\n")
+			else: #This value is the glosses input
+				self.responses[key] = [[a.get(), b.get().strip("\n")] for a, b in value]
+
+	def fill_responses(self, sentence_obj):
+		for word in SENTENCE_METADATA:
+			self.entries[word].insert(END, sentence_obj[word])
+
+class NewSentenceForm(SentenceForm):
 	def __init__(self, parent, file_page):
 		Form.__init__(self, parent)
 		responses = self.create_metadata_form()
+		self.file_page = file_page
 
 	def create_metadata_form(self):
-		self.entries = {}
-		self.entries["sentence"] = self.textarea("Whole sentence: ")
-		self.entries["translation"] = self.textarea("Translation: ")
+		self.sentence_metadata_input()
 		self.cancel_button(self._cancel)
 		self.save_button(self._generate_sentence, "Create the sentence")
 
 	def _cancel(self):
+		assert isinstance(root.previous_frame, FilePage), "Not a file page"
 		delete_content_frame()
 
 	def _generate_sentence(self):
-		pass
+		self.get_responses()
+		glosses = self.responses["sentence"].strip(".,")
+		self.responses["glosses"] = [[gloss, "^"] for gloss in glosses.split('+')]
+		self.file_page.new_sentence_display(self.responses)
+		print "Index passed in: " + str(self.file_page.sentence_index) + " and actual length is " + str(len(self.file_page.sentences))
+		switch_content_frames(SentenceEditor(root, self.file_page.sentence_index, self.file_page))
+
+class SentenceEditor(SentenceForm):
+	def __init__(self, parent, sentence_index, file_page):
+		Form.__init__(self, parent)
+		self.file_page = file_page
+		self.sentence_index = sentence_index
+		self.create_sentence_form(self.file_page.sentences[sentence_index])
+
+	def create_sentence_form(self, sentence_obj):
+		self.sentence_metadata_input()
+		self.entries["glosses"] = []
+		for gloss in sentence_obj["glosses"]:
+			self.entries["glosses"].append(self.input_pair(gloss[0], gloss[1]))
+		self.fill_responses(sentence_obj)
+		self.cancel_button(self._cancel)
+		self.save_button(lambda: self.save(remain=True), "Save and stay", column=2)
+		self.save_button(lambda: self.save(remain=False), "Save and exit", column=3)
+
+	def _cancel(self):
+		switch_content_frames(self.file_page)
+
+	def save(self, remain=True):
+		self.get_responses()
+		self.file_page.sentences[self.sentence_index] = self.responses
+		self.file_page.save()
+		if not remain:
+			self.recompute_preview()
+			switch_content_frames(self.file_page)
+
+	def recompute_preview(self):
+		button_text = self.file_page.sentence_button_text[self.sentence_index]
+		sentence_obj = self.file_page.sentences[self.sentence_index]
+		self.file_page.compute_preview(sentence_obj, self.sentence_index, button_text)
 
 app = App()
 
 """
 My notes:
 - Sentences will be represented as JSON object with:
-	- Whole sentence
-	- List of [morpheme, gloss]
+	- "sentence": Whole sentence
+	- "glosses": List of [morpheme, gloss]
 		- TODO: Easier to store combined tags separately or together?
-	- Literal Translation
-	- List of metatags
+	- "translation": Literal Translation
+	- "metatags": List of metatags
 """
