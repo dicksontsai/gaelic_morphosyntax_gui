@@ -1,28 +1,28 @@
 from Tkinter import *
 import tkMessageBox, tkFileDialog, tkFont
+from PIL import Image
 import os, fnmatch, json
 from util import *
+import httplib
+from filepage import FilePage
+from form import Form
+import types
 
-SCREEN_WIDTH = 1366
-SCREEN_HEIGHT = 768
-CONTENT_MIDDLE_X = 150
-CONTENT_MIDDLE_Y = 150
-SENTENCE_METADATA = ("sentence", "translation", "metatags")
 #welcome_font = tkFont.Font(family='Helvetica', size='-100', weight='bold', underline=1)
 
-def delete_content_frame():
-	assert root.previous_frame is not None, "No frame to fall back on"
-	switch_content_frames(root.previous_frame)
+def delete_content_frame(self):
+	assert self.previous_frame is not None, "No frame to fall back on"
+	self.switch_content_frames(self.previous_frame)
 
-def switch_content_frames(new_frame=None):
-	root.content.delete("self.active_frame")
+def switch_content_frames(self, new_frame=None):
+	self.content.delete("self.active_frame")
 	if new_frame is None:
-		new_frame = root.default_frame
+		new_frame = self.default_frame
 	assert isinstance(new_frame, Frame), "Bad input"
-	root.previous_frame = root.active_frame 
-	root.active_frame = new_frame
-	root.content.delete(root.active_frame_window)
-	root.active_frame_window = root.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=root.active_frame, anchor=NW, tags="self.active_frame")
+	self.previous_frame = self.active_frame 
+	self.active_frame = new_frame
+	self.content.delete(self.active_frame_window)
+	self.active_frame_window = self.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=self.active_frame, anchor=NW, tags="self.active_frame")
 
 class App(object):
 	def __init__(self):
@@ -40,13 +40,14 @@ class App(object):
 		self.root.content.configure(yscrollcommand=self.root.content_scrollbar.set)
 		self.root.content_scrollbar.grid(row=1, column=2)
 		self.root.content.grid(row=1, column=1)
-		#self.content.pack()
-		#self.content.create_text(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, text="Welcome to the Gaelic\n MorphoSyntax Gloss Manager", \
-			#fill="#0065BD", font=('Helvetica','-50', 'bold'))
+		DeveloperBox(self.root).grid(row=2)
 
+		#self.root.delete_content_frame = delete_content_frame
+		#self.root.switch_content_frames	= switch_content_frames
+		self.root.delete_content_frame = types.MethodType(delete_content_frame, self.root, self.root.__class__)
+		self.root.switch_content_frames	= types.MethodType(switch_content_frames, self.root, self.root.__class__)
 		#self.sidebar.grid(row=1)
-		self.root.open_content_frames = {}
-		self.root.active_frame = self.root.previous_frame = self.root.default_frame = self.root.open_content_frames['welcome'] = WelcomeFrame(self.root)
+		self.root.active_frame = self.root.previous_frame = self.root.default_frame = WelcomeFrame(self.root)
 		self.root.active_frame_window = self.root.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=self.root.active_frame, anchor=NW, tags="self.active_frame")
 		#self.content.grid(row=1, column=1)
 
@@ -61,11 +62,46 @@ class App(object):
 		self.root.bind('<Control-o>', self.top_menu._openHandler)
 		self.root.bind('<Control-s>', self.save_shortcut)
 
-	def save_shortcut(self):
+	def save_shortcut(self, *e):
 		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
 			self.root.active_frame.save()
 		else:
 			print "No save command"
+
+class DeveloperBox(Frame):
+	def __init__(self, parent):
+		Frame.__init__(self, parent)
+		self.parent = parent
+		self.instance = Frame(self)
+		self.instance.grid(row=0)
+		self.code_box = Text(self.instance)
+		self.code_box.grid(row=0)
+		self.run_button = Button(self.instance, text="Run code", command=self.execute_code)
+		self.run_button.grid(row=0, column=1)
+
+	def execute_code(self):
+		command = self.code_box.get(0.0, END)
+		exec(command)
+		self.code_box.delete(0.0, END)
+"""
+class OnlineDictionary(Frame):
+	def __init__(self, parent):
+		Frame.__init__(self, parent)
+		self.parent = parent
+		self.instance = Frame(self)
+		self.instance.grid(row=0)
+		self.initiate_entry()
+
+	def initiate_entry(self):
+		self.lookup_word = StringVar()
+		self.lookup_entry = Label(self.instance, textvariable=self.lookup_word)
+		self.lookup_entry.grid(row=0)
+		self.lookup_button = Button(self.instance, text="Search", command=self.parse_response)
+		self.lookup_button.grid(row=0, column=1)
+
+	def parse_response(self):
+		conn = httplib.HTTPConnection("")
+"""
 
 class MenuBar(Frame):
 	"""
@@ -133,35 +169,6 @@ class WelcomeFrame(Frame):
 		else:
 			self.clicked_cwd(new_dir)
 
-#class SentenceEditor(Frame):
-#class ChangeManager():
-"""
-class FileSideBar(Frame):
-	def __init__(self, parent):
-		Frame.__init__(self, parent)
-		self.parent = parent
-		self.grid(row=1)
-		self.buttons_list = []
-		self.render_sidebar()
-
-	def render_sidebar(self):
-		for button in self.buttons_list:
-			button.grid_forget()
-		self.__get_buttons()
-
-
-	def __get_buttons(self):
-		num_buttons = 0
-		for file in os.listdir('.'):
-			if fnmatch.fnmatch(file, '*.json'):
-				button = SideBarButton(self, file)
-				num_buttons += 1
-				button.grid(row=num_buttons)
-				self.buttons_list.append(button)
-
-	def __str__(self):
-		return "FileSideBar"
-"""
 class SideBar(Frame):
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
@@ -192,7 +199,7 @@ class SideBar(Frame):
 			value = w.get(index)
 			print 'You selected file %d: "%s"' % (index, value)
 			self.current_file = FilePage(root, value)
-			switch_content_frames(self.current_file)
+			self.parent.switch_content_frames(self.current_file)
 
 
 	def render_sidebar(self):
@@ -208,157 +215,12 @@ class SideBar(Frame):
 
 	def new_file(self):
 		new_file_form = NewFileForm(root)
-		switch_content_frames(new_file_form)
+		root.switch_content_frames(new_file_form)
 
 	def add_file_to_sidebar(self, file_name):
 		assert ".json" in file_name, "This file is not in JSON format"
 		self.listbox.insert(END, file_name)
 		self.files_list.append(file_name)
-
-	"""
-	def __str__(self):
-		return "SideBar"
-	"""
-"""
-class SideBarButton(Button):
-	def __init__(self, parent, json_file_name):
-		Button.__init__(self, parent, text=json_file_name, command=self.__generate_event(json_file_name))
-		self.parent = parent
-		self.file = json_file_name
-
-	def __generate_event(self, file_name):
-		def event(self):
-			if file_name not in root.open_content_frames:
-				root.open_content_frames[file_name] = FilePage(root, file_name)###
-			switch_content_frames(root.content, root.open_content_frames[file_name])
-		return event
-
-	def __str__(self):
-		return "SideBarButton: " + self.file
-"""
-
-class FilePage(Frame):
-	""" Displays the frame for each json file"""
-	def __init__(self, parent, json_file_name):
-		Frame.__init__(self, parent)
-		self.grid(row=1)
-		self.instance = Frame(self)
-		self.instance.grid(row=0)
-		self.sentence_index = -1
-		self.current_row = 0
-		Button(self.instance, text="Add new sentence", command=self._new_sentence).grid(row=self.current_row, column=1)
-		self.current_row += 1
-		self.file = json_file_name
-		self.sentence_button_text = []
-		self.load_sentences()
-
-	def load_sentences(self):
-		try:
-			self.json = json.load(open(self.file))
-			self.sentences = self.json["sentences"]
-			if len(self.sentences) == 0:
-				self.empty_label = Label(self.instance, text="This JSON file is empty. Please click the button to add a new sentence", justify=CENTER)
-				self.empty_label.grid(row=1)
-				return
-			counter, length = 0, len(self.sentences)
-			while counter < length:
-				self.new_sentence_display(self.sentences[counter])
-				counter += 1
-			return
-		except ValueError:
-			print "Invalid JSON file"
-			return
-
-	def _new_sentence(self):
-		#root.previous_frame = self
-		new_sentence_form = NewSentenceForm(root, self)
-		switch_content_frames(new_sentence_form)
-
-	def new_sentence_display(self, sentence_obj):
-		self.sentences.append(sentence_obj)
-		if hasattr(self, "empty_label"):
-			self.empty_label.grid_forget()
-		self.sentence_index += 1
-		button_index = self.sentence_index
-		self.sentence_button_text.append(self.compute_preview(sentence_obj, button_index))
-		button = Button(self.instance, textvariable=self.sentence_button_text[button_index], justify=LEFT, command=lambda: self.edit_sentence(button_index))
-		button.grid(row=self.current_row)
-		self.current_row += 1
-
-	def compute_preview(self, sentence_obj, button_index, button_text=None):
-		if button_text is None:
-			button_text = StringVar()
-		previews = []
-		for key in SENTENCE_METADATA:
-			entry = sentence_obj[key]
-			if key == "sentence":
-				entry = entry.replace("+", " ")
-			if len(entry) > 30:
-				entry = entry[:30] + "..."
-			previews.append(entry)
-		previews.append("Missing glosses: " + str(reduce(lambda x, y: x + int("^" in y), sentence_obj["glosses"], 0)))
-		button_text.set(str(button_index) + ") " + "\n".join(previews))
-		return button_text
-
-	def edit_sentence(self, sentence_index):
-		# TODO: Make sure sentence editor marks the original sentence dirty and moves new sentence into the dictionary when saved
-		edit_form = SentenceEditor(root, sentence_index, self)
-		switch_content_frames(edit_form)
-
-	def save(self):
-		"""
-		Saves any changes made to the FilePage
-		"""
-		file_to_write = open(self.file, 'w')
-		file_to_write.write(json.dumps(self.json))
-		print self.file + " is saved"
-
-	"""
-	def __str__(self):
-		return "FilePage: " + self.file
-	"""
-
-class Form(Frame):
-	""" A class inspired by HTML """
-	def __init__(self, parent):
-		Frame.__init__(self, parent)
-		self.grid(row=1)
-		self.instance = Frame(self)
-		self.instance.grid(row=0)
-		self.current_row = 0
-	
-	def input(self, text):
-		"""Sets up the Label and Entry widgets and then returns a pointer to the StringVar"""
-		Label(self.instance, text=text, justify=LEFT).grid(row=self.current_row)
-		entry_text = StringVar()
-		Entry(self.instance, textvariable=entry_text).grid(row=self.current_row, column=1)
-		self.current_row += 1
-		return entry_text
-
-	def input_pair(self, text1="", text2=""):
-		"""Sets up two pairs of input that are next to each other"""
-		entry_1 = StringVar()
-		entry_1.set(text1)
-		Entry(self.instance, textvariable=entry_1).grid(row=self.current_row)
-		entry_2 = StringVar()
-		entry_2.set(text2)
-		Entry(self.instance, textvariable=entry_2).grid(row=self.current_row, column=1)
-		self.current_row += 1
-		return entry_1, entry_2
-
-	def textarea(self, text, height=15):
-		Label(self.instance, text=text, justify=LEFT).grid(row=self.current_row)
-		self.current_row += 1
-		text_area = Text(self.instance, height=height) # Use .get(1, END) 
-		text_area.grid(row=self.current_row)
-		self.current_row += 1
-		return text_area
-
-	def cancel_button(self, cancel_action, text="Cancel"):
-		Button(self.instance, text=text, command=cancel_action).grid(row=self.current_row, column=1)
-
-	def save_button(self, save_action, text="Save", column=2):
-		Button(self.instance, text=text, command=save_action).grid(row=self.current_row, column=column)
 
 class NewFileForm(Form):
 	def __init__(self, parent):
@@ -388,83 +250,7 @@ class NewFileForm(Form):
 		root.sidebar.add_file_to_sidebar(file_name)
 		delete_content_frame()
 
-class SentenceForm(Form):
-	"""A form that deals with sentences"""
-	def sentence_metadata_input(self):
-		self.entries = {}
-		self.entries["sentence"] = self.textarea("Whole sentence.")
-		self.entries["translation"] = self.textarea("Translation: ")
-		self.entries["metatags"] = self.textarea("Metatags: ")
 
-	def get_responses(self):
-		self.responses = {}
-		for key, value in self.entries.items():
-			if isinstance(value, Text):
-
-				self.responses[key] = value.get(0.0, END)
-				self.responses[key] = self.responses[key].strip("\n")
-			else: #This value is the glosses input
-				self.responses[key] = [[a.get(), b.get().strip("\n")] for a, b in value]
-
-	def fill_responses(self, sentence_obj):
-		for word in SENTENCE_METADATA:
-			self.entries[word].insert(END, sentence_obj[word])
-
-class NewSentenceForm(SentenceForm):
-	def __init__(self, parent, file_page):
-		Form.__init__(self, parent)
-		responses = self.create_metadata_form()
-		self.file_page = file_page
-
-	def create_metadata_form(self):
-		self.sentence_metadata_input()
-		self.cancel_button(self._cancel)
-		self.save_button(self._generate_sentence, "Create the sentence")
-
-	def _cancel(self):
-		assert isinstance(root.previous_frame, FilePage), "Not a file page"
-		delete_content_frame()
-
-	def _generate_sentence(self):
-		self.get_responses()
-		glosses = self.responses["sentence"].strip(".,")
-		self.responses["glosses"] = [[gloss, "^"] for gloss in glosses.split('+')]
-		self.file_page.new_sentence_display(self.responses)
-		print "Index passed in: " + str(self.file_page.sentence_index) + " and actual length is " + str(len(self.file_page.sentences))
-		switch_content_frames(SentenceEditor(root, self.file_page.sentence_index, self.file_page))
-
-class SentenceEditor(SentenceForm):
-	def __init__(self, parent, sentence_index, file_page):
-		Form.__init__(self, parent)
-		self.file_page = file_page
-		self.sentence_index = sentence_index
-		self.create_sentence_form(self.file_page.sentences[sentence_index])
-
-	def create_sentence_form(self, sentence_obj):
-		self.sentence_metadata_input()
-		self.entries["glosses"] = []
-		for gloss in sentence_obj["glosses"]:
-			self.entries["glosses"].append(self.input_pair(gloss[0], gloss[1]))
-		self.fill_responses(sentence_obj)
-		self.cancel_button(self._cancel)
-		self.save_button(lambda: self.save(remain=True), "Save and stay", column=2)
-		self.save_button(lambda: self.save(remain=False), "Save and exit", column=3)
-
-	def _cancel(self):
-		switch_content_frames(self.file_page)
-
-	def save(self, remain=True):
-		self.get_responses()
-		self.file_page.sentences[self.sentence_index] = self.responses
-		self.file_page.save()
-		if not remain:
-			self.recompute_preview()
-			switch_content_frames(self.file_page)
-
-	def recompute_preview(self):
-		button_text = self.file_page.sentence_button_text[self.sentence_index]
-		sentence_obj = self.file_page.sentences[self.sentence_index]
-		self.file_page.compute_preview(sentence_obj, self.sentence_index, button_text)
 
 app = App()
 
