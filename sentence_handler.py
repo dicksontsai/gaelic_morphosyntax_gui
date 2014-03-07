@@ -63,8 +63,11 @@ class SentenceEditor(SentenceForm):
 	def create_sentence_form(self, sentence_obj):
 		self.sentence_metadata_input()
 		self.entries["glosses"] = []
+		# index_counter = 0
 		for gloss in sentence_obj["glosses"]:
 			self.entries["glosses"].append(self.input_pair(gloss[0], gloss[1]))
+		# self.entries["glosses"].append(GlossButtons(self.instance, gloss[0], gloss[1]))
+		# index_counter += 1
 		self.fill_responses(sentence_obj)
 		self.cancel_button(self._cancel)
 		self.save_button(lambda: self.save(remain=True), "Save and stay", column=2)

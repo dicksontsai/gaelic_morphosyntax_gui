@@ -28,6 +28,9 @@ class Form(Frame):
 		self.current_row += 1
 		return entry_1, entry_2
 
+	def gloss_frame(self):
+		return GlossButtons(self)
+
 	def textarea(self, text, height=15):
 		Label(self.instance, text=text, justify=LEFT).grid(row=self.current_row)
 		self.current_row += 1
@@ -41,3 +44,38 @@ class Form(Frame):
 
 	def save_button(self, save_action, text="Save", column=2):
 		Button(self.instance, text=text, command=save_action).grid(row=self.current_row, column=column)
+
+class GlossButtons(Form):
+	def __init__(self, parent, position, text1="", text2=""):
+		Form.__init__(self, parent)
+		self.instance = Frame(self)
+		self.instance.grid(row=0)
+		self.current_column = 0
+		self.position = position
+		self.instantiate_form(text1, text2)
+
+	def instantiate_form(self, text1, text2):
+		self.morpheme = StringVar()
+		self.morpheme.set(text1)
+		Entry(self.instance, textvariable=self.morpheme).grid(row=0)
+		self.current_column += 1
+		self.gloss = StringVar()
+		self.gloss.set(text2)
+		Entry(self.instance, textvariable=self.gloss).grid(row=0, column=self.current_column)
+		self.current_column += 1
+		Button(self.instance, text="Delete", command=self._delete).grid(row=0, column=self.current_column)
+		self.current_column += 1
+		Button(self.instance, text="Move up", command=self._move_up).grid(row=0, column=self.current_column)
+		self.current_column += 1
+		Button(self.instance, text="Move down", command=self._move_down).grid(row=0, column=self.current_column)
+		self.current_column += 1
+
+	"""
+	def _delete(self):
+		self.grid_forget()
+
+	def _move_up(self, gloss_partner):
+
+
+	def _move_down(self, gloss_partner):
+	"""
