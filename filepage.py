@@ -1,5 +1,6 @@
 from Tkinter import *
-import json
+import tkMessageBox
+import json, os
 from util import *
 from sentence_handler import *
 
@@ -41,8 +42,9 @@ class FilePage(Frame):
 		new_sentence_form = NewSentenceForm(self.root, self)
 		self.root.switch_content_frames(new_sentence_form)
 
-	def new_sentence_display(self, sentence_obj):
-		self.sentences.append(sentence_obj)
+	def new_sentence_display(self, sentence_obj, add_to_sentences=False):
+		if add_to_sentences:
+			self.sentences.append(sentence_obj)
 		if hasattr(self, "empty_label"):
 			self.empty_label.grid_forget()
 		self.sentence_index += 1
@@ -66,7 +68,8 @@ class FilePage(Frame):
 				entry = entry[:30] + "..."
 			previews.append(entry)
 		previews.append("Missing glosses: " + str(reduce(lambda x, y: x + int("^" in y), sentence_obj["glosses"], 0)))
-		button_text.set(str(button_index) + ") " + "\n".join(previews))
+		display_string = str(button_index) + ") " + "\n".join(previews)
+		button_text.set(display_string)
 		return button_text
 
 	def edit_sentence(self, sentence_index):
@@ -81,14 +84,15 @@ class FilePage(Frame):
 		"""
 		os.remove(self.file)
 		file_to_write = open(self.file, 'w')
+		#print self.sentences
 		a = json.dumps(self.json)
-		print a
+		#print a
 		file_to_write.write(a)
 		print self.file + " is saved"
 
 	def delete_sentence(self, sentence_index):
 		"""Currently does not work"""
-		if not tkMessageBox.askyesno("Delete sentence " + str(sentence_index) + "?"):
+		if not tkMessageBox.askyesno("Delete sentence prompt", "Delete sentence " + str(sentence_index) + "?"):
 			return
 		print(sentence_index)
 		a = self.sentences.pop(sentence_index)

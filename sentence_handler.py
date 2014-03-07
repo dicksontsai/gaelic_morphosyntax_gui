@@ -1,10 +1,12 @@
+from Tkinter import *
 from form import Form
+from util import *
 
 class SentenceForm(Form):
 	"""A form that deals with sentences"""
 	def sentence_metadata_input(self):
 		self.entries = {}
-		self.entries["sentence"] = self.textarea("Whole sentence.")
+		self.entries["sentence"] = self.textarea("Whole sentence. Remember to add + between each word.")
 		self.entries["translation"] = self.textarea("Translation: ")
 		self.entries["metatags"] = self.textarea("Metatags: ")
 
@@ -12,7 +14,6 @@ class SentenceForm(Form):
 		self.responses = {}
 		for key, value in self.entries.items():
 			if isinstance(value, Text):
-
 				self.responses[key] = value.get(0.0, END)
 				self.responses[key] = self.responses[key].strip("\n")
 			else: #This value is the glosses input
@@ -27,6 +28,7 @@ class NewSentenceForm(SentenceForm):
 		Form.__init__(self, parent)
 		responses = self.create_metadata_form()
 		self.file_page = file_page
+		self.root = parent
 
 	def create_metadata_form(self):
 		self.sentence_metadata_input()
@@ -34,7 +36,7 @@ class NewSentenceForm(SentenceForm):
 		self.save_button(self._generate_sentence, "Create the sentence")
 
 	def _cancel(self):
-		assert isinstance(root.previous_frame, FilePage), "Not a file page"
+		assert isinstance(self.root.previous_frame, FilePage), "Not a file page"
 		self.root.delete_content_frame()
 
 	def _generate_sentence(self):
@@ -43,7 +45,7 @@ class NewSentenceForm(SentenceForm):
 		self.responses["glosses"] = [[gloss, "^"] for gloss in glosses.split('+')]
 		self.responses["sentence"] = self.responses["sentence"].replace("+", " ")
 		print "Index passed in: " + str(self.file_page.sentence_index) + " and actual length is " + str(len(self.file_page.sentences))
-		self.root.switch_content_frames(SentenceEditor(root, self.file_page.sentence_index+1, self.file_page, self.responses))
+		self.root.switch_content_frames(SentenceEditor(self.root, self.file_page.sentence_index+1, self.file_page, self.responses))
 
 class SentenceEditor(SentenceForm):
 	def __init__(self, parent, sentence_index, file_page, new_sentence=None):
@@ -51,6 +53,7 @@ class SentenceEditor(SentenceForm):
 		self.file_page = file_page
 		self.sentence_index = sentence_index
 		self.new_sentence = new_sentence
+		self.root = parent
 		if new_sentence:
 			target_sentence = new_sentence
 		else:
@@ -73,7 +76,7 @@ class SentenceEditor(SentenceForm):
 	def save(self, remain=True):
 		self.get_responses()
 		if self.new_sentence:
-			self.file_page.new_sentence_display(self.responses)
+			self.file_page.new_sentence_display(self.responses, add_to_sentences=True)
 		print str(self.sentence_index)
 		self.file_page.sentences[self.sentence_index] = self.responses
 

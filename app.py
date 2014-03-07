@@ -1,6 +1,5 @@
 from Tkinter import *
 import tkMessageBox, tkFileDialog, tkFont
-from PIL import Image
 import os, fnmatch, json
 from util import *
 import httplib
@@ -22,7 +21,8 @@ def switch_content_frames(self, new_frame=None):
 	self.previous_frame = self.active_frame 
 	self.active_frame = new_frame
 	self.content.delete(self.active_frame_window)
-	self.active_frame_window = self.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=self.active_frame, anchor=NW, tags="self.active_frame")
+	self.active_frame_window = self.content.create_window((self.winfo_screenwidth()/12, self.winfo_screenheight()/8), window=self.active_frame, anchor=NW, tags="self.active_frame")
+	#self.content.configure(scrollregion=self.content.bbox(self.active_frame_window))
 
 class App(object):
 	def __init__(self):
@@ -34,13 +34,17 @@ class App(object):
 		self.top_menu.grid(row=0)
 		self.root.sidebar = SideBar(self.root)
 
-		self.root.content = Canvas(self.root, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
+		self.root.content_frame = Frame(root, bd=2, relief=GROOVE)
+		self.root.content_frame.grid(row=1, column=1)
+		self.root.content_frame.grid_rowconfigure(0, weight=1)
+		self.root.content_frame.grid_columnconfigure(0, weight=1)
+		self.root.content = Canvas(self.root, width=self.root.winfo_screenwidth() - 200, height=self.root.winfo_screenheight())
 
-		self.root.content_scrollbar = Scrollbar(self.root, orient="vertical", command=self.root.content.yview)
-		self.root.content.configure(yscrollcommand=self.root.content_scrollbar.set)
-		self.root.content_scrollbar.grid(row=1, column=2)
+		self.root.content_scrollbar = Scrollbar(self.root, command=self.root.content.yview)
+		self.root.content.configure(yscrollcommand=self.root.content_scrollbar.set, scrollregion=(0, 0, 1000, 3000))
+		self.root.content_scrollbar.grid(row=1, column=2, sticky=N+S)
 		self.root.content.grid(row=1, column=1)
-		DeveloperBox(self.root).grid(row=2)
+		#DeveloperBox(self.root).grid(row=2)
 
 		#self.root.delete_content_frame = delete_content_frame
 		#self.root.switch_content_frames	= switch_content_frames
@@ -48,7 +52,7 @@ class App(object):
 		self.root.switch_content_frames	= types.MethodType(switch_content_frames, self.root, self.root.__class__)
 		#self.sidebar.grid(row=1)
 		self.root.active_frame = self.root.previous_frame = self.root.default_frame = WelcomeFrame(self.root)
-		self.root.active_frame_window = self.root.content.create_window((CONTENT_MIDDLE_X, CONTENT_MIDDLE_Y), window=self.root.active_frame, anchor=NW, tags="self.active_frame")
+		self.root.active_frame_window = self.root.content.create_window((self.root.winfo_screenwidth()/12, self.root.winfo_screenheight()/4), window=self.root.active_frame, anchor=NW, tags="self.active_frame")
 		#self.content.grid(row=1, column=1)
 
 		self.init_bindings()
@@ -134,13 +138,13 @@ class WelcomeFrame(Frame):
 		self.instance = Frame(self)	#f3
 		self.instance.grid(row=0)
 
-		self.welcome_label = Label(self.instance, justify=CENTER, fg="#0065BD", font=('Helvetica', '-50', 'bold'), text="Welcome to the Gaelic\nMorphoSyntax Gloss Manager")
+		self.welcome_label = Label(self.instance, justify=CENTER, fg="#0065BD", font=('Helvetica', '-40', 'bold'), text="Welcome to the Gaelic\nMorphoSyntax Gloss Manager")
 		self.welcome_label.grid(row=0, ipadx=50, ipady=50)
 
 
 		self.cwd_labeltext = StringVar()
 		self.cwd_labeltext.set("Your current working directory is " + os.getcwd())
-		self.cwd_label = Label(self.instance, textvariable=self.cwd_labeltext)
+		self.cwd_label = Label(self.instance, wraplength=400, textvariable=self.cwd_labeltext)
 		self.cwd_label.grid(row=1)
 
 		self.cwd_entrytext = StringVar()
@@ -225,6 +229,7 @@ class SideBar(Frame):
 class NewFileForm(Form):
 	def __init__(self, parent):
 		Form.__init__(self, parent)
+		self.parent = parent
 		self.create_form()
 
 	def create_form(self):
@@ -237,7 +242,7 @@ class NewFileForm(Form):
 		self.save_button(self._generate_file, "Generate new JSON file")
 
 	def _cancel(self):
-		delete_content_frame()
+		root.delete_content_frame()
 
 	def _generate_file(self):
 		file_name = self.entries["filename"].get()
@@ -248,7 +253,7 @@ class NewFileForm(Form):
 		json_object["sentences"] = []
 		new_file.write(json.dumps(json_object))
 		root.sidebar.add_file_to_sidebar(file_name)
-		delete_content_frame()
+		root.delete_content_frame()
 
 
 
