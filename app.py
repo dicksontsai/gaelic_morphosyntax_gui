@@ -78,7 +78,7 @@ class DeveloperBox(Frame):
 		self.parent = parent
 		self.instance = Frame(self)
 		self.instance.grid(row=0)
-		self.code_box = Text(self.instance)
+		self.code_box = Text(self.instance, width=10)
 		self.code_box.grid(row=0)
 		self.run_button = Button(self.instance, text="Run code", command=self.execute_code)
 		self.run_button.grid(row=0, column=1)
@@ -231,6 +231,7 @@ class NewFileForm(Form):
 		Form.__init__(self, parent)
 		self.parent = parent
 		self.create_form()
+		#self.bind("<Enter>", self._generate_file)
 
 	def create_form(self):
 		self.entries = {}
@@ -238,6 +239,7 @@ class NewFileForm(Form):
 		self.entries["book"] = self.input("Book:")
 		self.entries["chapter"] = self.input("Chapter:")
 		self.entries["author"] = self.input("Author:")
+		self.entries["dialect"] = self.input("Dialect:")
 		self.cancel_button(self._cancel)
 		self.save_button(self._generate_file, "Generate new JSON file")
 
@@ -249,7 +251,7 @@ class NewFileForm(Form):
 		if ".json" not in file_name:
 			file_name = file_name + ".json"
 		new_file = open(file_name, "w")
-		json_object = {entry: self.entries[entry].get() for entry in ("book", "chapter", "author")}
+		json_object = {entry: self.entries[entry].get() for entry in ("book", "chapter", "author", "dialect")}
 		json_object["sentences"] = []
 		new_file.write(json.dumps(json_object))
 		root.sidebar.add_file_to_sidebar(file_name)

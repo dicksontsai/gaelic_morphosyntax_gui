@@ -1,5 +1,5 @@
 from Tkinter import *
-from form import Form
+from form import *
 from util import *
 
 class SentenceForm(Form):
@@ -17,11 +17,27 @@ class SentenceForm(Form):
 				self.responses[key] = value.get(0.0, END)
 				self.responses[key] = self.responses[key].strip("\n")
 			else: #This value is the glosses input
-				self.responses[key] = [[a.get(), b.get().strip("\n")] for a, b in value]
+				self.responses[key] = [[gloss.morpheme.get(), gloss.gloss.get().strip("\n")] for gloss in value if not gloss.dirty]
 
 	def fill_responses(self, sentence_obj):
 		for word in SENTENCE_METADATA:
 			self.entries[word].insert(END, sentence_obj[word])
+
+	def add_gloss_button(self, position, offset):
+		button = Button(self.instance, text="Add gloss")
+		button.position = position
+		button.configure(command=self.add_gloss_function(button, offset))
+		button.grid(row=self.current_row)
+		self.current_row += 1
+
+	def add_gloss_function(self, button, offset):
+		def add_gloss():
+			button.grid_forget()
+			self.entries["glosses"].append(self.gloss_frame(button.position, offset))
+			button.position += 1
+			button.grid(row=self.current_row)
+			self.current_row += 1
+		return add_gloss
 
 class NewSentenceForm(SentenceForm):
 	def __init__(self, parent, file_page):
@@ -29,6 +45,7 @@ class NewSentenceForm(SentenceForm):
 		responses = self.create_metadata_form()
 		self.file_page = file_page
 		self.root = parent
+		#self.bind("<Enter>", self._generate_sentence)
 
 	def create_metadata_form(self):
 		self.sentence_metadata_input()
@@ -44,7 +61,7 @@ class NewSentenceForm(SentenceForm):
 		glosses = self.responses["sentence"].strip(".,")
 		self.responses["glosses"] = [[gloss, "^"] for gloss in glosses.split('+')]
 		self.responses["sentence"] = self.responses["sentence"].replace("+", " ")
-		print "Index passed in: " + str(self.file_page.sentence_index) + " and actual length is " + str(len(self.file_page.sentences))
+		#print "Index passed in: " + str(self.file_page.sentence_index) + " and actual length is " + str(len(self.file_page.sentences))
 		self.root.switch_content_frames(SentenceEditor(self.root, self.file_page.sentence_index+1, self.file_page, self.responses))
 
 class SentenceEditor(SentenceForm):
@@ -59,15 +76,20 @@ class SentenceEditor(SentenceForm):
 		else:
 			target_sentence = self.file_page.sentences[sentence_index]
 		self.create_sentence_form(target_sentence)
+		#self.bind("<Enter>", lambda event: self.save(remain=False))
 
 	def create_sentence_form(self, sentence_obj):
 		self.sentence_metadata_input()
 		self.entries["glosses"] = []
-		# index_counter = 0
+		index_counter = 0
+		offset = self.current_row
 		for gloss in sentence_obj["glosses"]:
-			self.entries["glosses"].append(self.input_pair(gloss[0], gloss[1]))
-		# self.entries["glosses"].append(GlossButtons(self.instance, gloss[0], gloss[1]))
-		# index_counter += 1
+		#	self.entries["glosses"].append(self.input_pair(gloss[0], gloss[1]))
+			self.entries["glosses"].append(self.gloss_frame(index_counter, offset, gloss[0], gloss[1]))
+			index_counter += 1
+		#print "gloss button" + str(self.current_row)
+		self.add_gloss_button(index_counter, offset)
+		#print [gloss.gloss.get() for gloss in self.entries["glosses"]]
 		self.fill_responses(sentence_obj)
 		self.cancel_button(self._cancel)
 		self.save_button(lambda: self.save(remain=True), "Save and stay", column=2)
@@ -92,3 +114,4 @@ class SentenceEditor(SentenceForm):
 		button_text = self.file_page.sentence_button_text[self.sentence_index]
 		sentence_obj = self.file_page.sentences[self.sentence_index]
 		self.file_page.compute_preview(sentence_obj, self.sentence_index, button_text)
+
