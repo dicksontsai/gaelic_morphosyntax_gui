@@ -1,12 +1,16 @@
 from Tkinter import *
 import tkMessageBox, tkFileDialog, tkFont
-import os, fnmatch, json
-from util import *
-import httplib
-from filepage import FilePage
-from form import Form
+import os, fnmatch, json, webbrowser
 import types
 
+from util import *
+from filepage import FilePage
+from form import Form
+try:
+	import config
+except:
+	print "No config file found"
+	config = False
 #welcome_font = tkFont.Font(family='Helvetica', size='-100', weight='bold', underline=1)
 
 def delete_content_frame(self):
@@ -27,8 +31,13 @@ def switch_content_frames(self, new_frame=None):
 class App(object):
 	def __init__(self):
 		global root
+		global app
 		root = self.root = Tk()
-		self.root.wm_title("Gaelic MorphoSyntax Gloss Manager")
+		app = self
+		if not config or not config.language:
+			self.root.wm_title("Morphosyntax Gloss Manager")
+		else:
+			self.root.wm_title(config.language + " MorphoSyntax Gloss Manager")
 
 		self.top_menu = MenuBar(self.root)
 		self.top_menu.grid(row=0)
@@ -63,9 +72,10 @@ class App(object):
 
 	def init_bindings(self):
 		"""These bindings define keyboard shortucts to app"""
-		self.root.bind('<Control-o>', self.top_menu._openHandler)
+		#self.root.bind('<Control-o>', self.top_menu._openHandler)
 		self.root.bind('<Control-s>', self.save_shortcut)
 		self.root.bind('<Control-q>', self.quit)
+		self.root.bind('<Control-d>', self.open_dictionary)
 
 	def save_shortcut(self, *e):
 		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
@@ -78,6 +88,11 @@ class App(object):
 			return
 		root.quit()
 
+	def open_dictionary(self, *e):
+		try:
+			webbrowser.open(config.dictionary_website)
+		except:
+			tkMessageBox.showerror("Missing dictionary", "Dictionary not supported. Please provide a dictionary in config.py")
 class DeveloperBox(Frame):
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
@@ -128,8 +143,10 @@ class MenuBar(Frame):
 	def create_file_menu(self):
 		self.fileMenu = Menu(self.menuBar)
 		self.menuBar.add_cascade(label='File', menu=self.fileMenu)
-		self.fileMenu.add_command(label='Open', command=self._openHandler, accelerator="Ctrl-o")
+		#self.fileMenu.add_command(label='Open', command=self._openHandler, accelerator="Ctrl-o")
+		self.fileMenu.add_command(label='Save', command=app.save_shortcut, accelerator="Ctrl-s")
 		self.fileMenu.add_command(label='Quit', command=self._quitHandler, accelerator="Ctrl-q")
+		self.fileMenu.add_command(label='Open online dictionary', command=app.open_dictionary, accelerator="Ctrl-d")
 
 	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
@@ -148,8 +165,12 @@ class WelcomeFrame(Frame):
 
 		self.instance = Frame(self)	#f3
 		self.instance.grid(row=0)
-
-		self.welcome_label = Label(self.instance, justify=CENTER, fg="#0065BD", font=('Helvetica', '-40', 'bold'), text="Welcome to the Gaelic\nMorphoSyntax Gloss Manager")
+		language = StringVar()
+		if not config or not config.language:
+			language.set("Welcome to the \nMorphoSyntax Gloss Manager")
+		else:
+			language.set("Welcome to the " + config.language + "\nMorphoSyntax Gloss Manager")
+		self.welcome_label = Label(self.instance, justify=CENTER, fg="#0065BD", font=('Helvetica', '-40', 'bold'), textvar=language)
 		self.welcome_label.grid(row=0, ipadx=50, ipady=50)
 
 
@@ -286,7 +307,7 @@ class NewFileForm(Form):
 
 
 
-app = App()
+App()
 
 """
 My notes:
