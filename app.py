@@ -202,20 +202,23 @@ class SideBar(Frame):
 		self.initialize_listbox()
 		self.render_sidebar()
 		self.current_file = None
+		Button(self.instance, text="Delete JSON file", command=self.delete_file).grid(row=3)
 
 	def initialize_listbox(self):
 		"""Bind events to the listbox"""
 		@bind(self.listbox, '<<ListboxSelect>>')
 		def onselect(evt):
-			if self.current_file is not None:
-				self.current_file.save()
-			w = evt.widget
-			index = int(w.curselection()[0])
-			value = w.get(index)
-			print 'You selected file %d: "%s"' % (index, value)
-			self.current_file = FilePage(root, value)
-			self.parent.switch_content_frames(self.current_file)
-
+			try:
+				if self.current_file is not None:
+					self.current_file.save()
+				w = evt.widget
+				index = int(w.curselection()[0])
+				value = w.get(index)
+				print 'You selected file %d: "%s"' % (index, value)
+				self.current_file = FilePage(root, value)
+				self.parent.switch_content_frames(self.current_file)
+			except OSError:
+				return
 
 	def render_sidebar(self):
 		self.listbox.delete(0, END)
@@ -236,6 +239,19 @@ class SideBar(Frame):
 		assert ".json" in file_name, "This file is not in JSON format"
 		self.listbox.insert(END, file_name)
 		self.files_list.append(file_name)
+
+	def delete_file(self):
+		w = self.listbox
+		if len(w.curselection()) == 0:
+			return
+		index = int(w.curselection()[0])
+		value = w.get(index)
+		if not tkMessageBox.askyesno("Delete JSON file", "Delete " + str(value)):
+			return
+		os.remove(value)
+		w.delete(ANCHOR)
+		root.switch_content_frames()
+		self.current_file = None
 
 class NewFileForm(Form):
 	def __init__(self, parent):
