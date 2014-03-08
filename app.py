@@ -65,12 +65,18 @@ class App(object):
 		"""These bindings define keyboard shortucts to app"""
 		self.root.bind('<Control-o>', self.top_menu._openHandler)
 		self.root.bind('<Control-s>', self.save_shortcut)
+		self.root.bind('<Control-q>', self.quit)
 
 	def save_shortcut(self, *e):
 		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
 			self.root.active_frame.save()
 		else:
 			print "No save command"
+
+	def quit(self, *e):
+		if not tkMessageBox.askyesno("Quit the App", "Are you sure you would like to quit? Are all changes saved?"):
+			return
+		root.quit()
 
 class DeveloperBox(Frame):
 	def __init__(self, parent):
@@ -123,11 +129,16 @@ class MenuBar(Frame):
 		self.fileMenu = Menu(self.menuBar)
 		self.menuBar.add_cascade(label='File', menu=self.fileMenu)
 		self.fileMenu.add_command(label='Open', command=self._openHandler, accelerator="Ctrl-o")
+		self.fileMenu.add_command(label='Quit', command=self._quitHandler, accelerator="Ctrl-q")
 
 	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
 		print selected_file
 
+	def _quitHandler(self, *e):
+		if not tkMessageBox.askyesno("Quit the App", "Are you sure you would like to quit? Are all changes saved?"):
+			return
+		root.quit()
 
 class WelcomeFrame(Frame):
 	def __init__(self, parent):
