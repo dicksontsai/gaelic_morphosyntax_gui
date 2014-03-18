@@ -62,9 +62,16 @@ class FilePage(Frame):
 			button_text = StringVar()
 		previews = []
 		for key in SENTENCE_METADATA:
+			if key not in sentence_obj:
+				continue
 			entry = sentence_obj[key]
 			if key == "sentence":
 				entry = entry.replace("+", " ")
+			elif key == "page":
+				entry = "Page: " + str(entry)
+			elif key == "my_translation":
+				previews[len(previews) - 1] = "*" + previews[len(previews) - 1]
+				continue
 			if len(entry) > 30:
 				entry = entry[:30] + "..."
 			previews.append(entry)

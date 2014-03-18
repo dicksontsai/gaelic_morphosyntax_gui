@@ -9,12 +9,19 @@ class Form(Frame):
 		self.instance = Frame(self)
 		self.instance.grid(row=0)
 		self.current_row = 0
-	
+
+	def checkbox(self, text):
+		value = IntVar()
+		Checkbutton(self.instance, text=text, variable=value).grid(row=self.current_row)
+		self.current_row += 1
+		return value
+
 	def input(self, text):
 		"""Sets up the Label and Entry widgets and then returns a pointer to the StringVar"""
 		Label(self.instance, text=text, justify=LEFT).grid(row=self.current_row)
+		self.current_row += 1
 		entry_text = StringVar()
-		Entry(self.instance, textvariable=entry_text).grid(row=self.current_row, column=1)
+		Entry(self.instance, textvariable=entry_text).grid(row=self.current_row)
 		self.current_row += 1
 		return entry_text
 

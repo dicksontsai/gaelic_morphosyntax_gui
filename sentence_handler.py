@@ -9,7 +9,9 @@ class SentenceForm(Form):
 		self.entries = {}
 		self.entries["sentence"] = self.textarea("Whole sentence. Remember to add + between each word.")
 		self.entries["translation"] = self.textarea("Translation: ")
+		self.entries["my_translation"] = self.checkbox("My translation")
 		self.entries["metatags"] = self.textarea("Metatags: ")
+		self.entries["page"] = self.input("Page: Use decimal for precision (i.e. 5.1 = pg. 5 top, 5.9 = pg. 5 bottom")
 
 	def get_responses(self):
 		self.responses = {}
@@ -17,11 +19,17 @@ class SentenceForm(Form):
 			if isinstance(value, Text):
 				self.responses[key] = value.get(0.0, END)
 				self.responses[key] = self.responses[key].strip("\n")
+			elif key == "page" or key=="my_translation":
+				self.responses[key] = str(self.entries[key].get())
 			else: #This value is the glosses input
 				self.responses[key] = [[gloss.morpheme.get(), gloss.gloss.get().strip("\n")] for gloss in value if not gloss.dirty]
 
 	def fill_responses(self, sentence_obj):
 		for word in SENTENCE_METADATA:
+			if word == "page" or word=="my_translation": #This is for new sentence attributes
+				if word in sentence_obj:
+					self.entries[word].set(sentence_obj[word])
+				continue
 			self.entries[word].insert(END, sentence_obj[word])
 
 	def add_gloss_button(self, position, offset):
