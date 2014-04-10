@@ -5,6 +5,7 @@ import types
 
 from util import *
 from filepage import FilePage
+from dropbox_manager import DropboxManager
 from form import Form
 try:
 	import config
@@ -76,6 +77,7 @@ class App(object):
 		self.root.bind('<Control-s>', self.save_shortcut)
 		self.root.bind('<Control-q>', self.quit)
 		self.root.bind('<Control-d>', self.open_dictionary)
+		self.root.bind('<Control-w>', self.write_dropbox)
 
 	def save_shortcut(self, *e):
 		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
@@ -93,6 +95,11 @@ class App(object):
 			webbrowser.open(config.dictionary_website)
 		except:
 			tkMessageBox.showerror("Missing dictionary", "Dictionary not supported. Please provide a dictionary in config.py")
+
+	def write_dropbox(self, *e):
+		dropbox = DropboxManager(self.root, self.root.previous_frame, "save")
+		dropbox.request()
+
 class DeveloperBox(Frame):
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
@@ -147,6 +154,7 @@ class MenuBar(Frame):
 		self.fileMenu.add_command(label='Save', command=app.save_shortcut, accelerator="Ctrl-s")
 		self.fileMenu.add_command(label='Quit', command=self._quitHandler, accelerator="Ctrl-q")
 		self.fileMenu.add_command(label='Open online dictionary', command=app.open_dictionary, accelerator="Ctrl-d")
+		self.fileMenu.add_command(label='Write files to Dropbox', command=app.write_dropbox, accelerator="Ctrl-w")
 
 	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
@@ -316,5 +324,7 @@ My notes:
 	- "glosses": List of [morpheme, gloss]
 		- TODO: Easier to store combined tags separately or together?
 	- "translation": Literal Translation
+	- "page": 
+	- "mytranslation"
 	- "metatags": List of metatags
 """
