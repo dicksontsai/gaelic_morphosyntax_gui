@@ -7,6 +7,7 @@ from util import *
 from filepage import FilePage
 from dropbox_manager import DropboxManager
 from form import Form
+from update import update
 try:
 	import config
 except:
@@ -78,6 +79,7 @@ class App(object):
 		self.root.bind('<Control-q>', self.quit)
 		self.root.bind('<Control-d>', self.open_dictionary)
 		self.root.bind('<Control-w>', self.write_dropbox)
+		self.root.bind('<Control-u>',  self.update_software)
 
 	def save_shortcut(self, *e):
 		if hasattr(self.root.active_frame, "save") and callable(getattr(self.root.active_frame, "save")):
@@ -99,6 +101,9 @@ class App(object):
 	def write_dropbox(self, *e):
 		dropbox = DropboxManager(self.root, self.root.previous_frame, "save")
 		dropbox.request()
+
+	def update_software(self, *e):
+		update()
 
 class DeveloperBox(Frame):
 	def __init__(self, parent):
@@ -155,6 +160,7 @@ class MenuBar(Frame):
 		self.fileMenu.add_command(label='Quit', command=self._quitHandler, accelerator="Ctrl-q")
 		self.fileMenu.add_command(label='Open online dictionary', command=app.open_dictionary, accelerator="Ctrl-d")
 		self.fileMenu.add_command(label='Write files to Dropbox', command=app.write_dropbox, accelerator="Ctrl-w")
+		self.fileMenu.add_command(label='Update software', command=app.update_software, accelerator="Ctrl-u")
 
 	def _openHandler(self, *e):
 		selected_file = tkFileDialog.askopenfilename()
