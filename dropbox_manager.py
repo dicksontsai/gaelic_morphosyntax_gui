@@ -58,7 +58,7 @@ class DropboxManager():
             if fnmatch.fnmatch(json_file, '*.json'):
                 with open(json_file, 'r') as f:
                     client.put_file("/" + json_file, f, overwrite=True)
-        tkMessageBox.showinfo("The files are successfully uploaded to Dropbox.")
+        tkMessageBox.showinfo("Success!", "The files are successfully uploaded to Dropbox.")
 
 def main():
     if APP_KEY == '' or APP_SECRET == '':

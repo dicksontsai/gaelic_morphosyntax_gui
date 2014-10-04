@@ -1,8 +1,8 @@
 import dropbox
 import webbrowser
 
-APP_KEY = 'on05eegr9q45xib'
-APP_SECRET = 'ymdv0q3j7pmo35r'
+APP_KEY = '' # Fill key within the quotes
+APP_SECRET = '' # Fill secret within the quotes
 
 
 

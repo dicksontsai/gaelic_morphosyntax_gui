@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 from Tkinter import *
 import tkMessageBox, tkFileDialog, tkFont
 import os, fnmatch, json, webbrowser
